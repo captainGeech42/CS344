@@ -21,7 +21,7 @@
 
 # usage: matrix_valid(filepath)
 function matrix_valid() {
-    if [ "$#" -ne 2 ]; then
+    if [ "$#" -ne 1 ]; then
 	echo "invalid call to matrix_valid()" >&2
 	return 1
     fi
@@ -33,6 +33,26 @@ function matrix_valid() {
 	return 1;
     fi
 
+    # validity checks on the file's contents are out of scope for this assignment
+    # if we can read it, we are good to go
+
+    return 0
+}
+
+# usage: matrix_num_cols(filepath)
+# precondition: matrix is readable
+# you must call this function like this: num_cols=$(matrix_num_cols $file)
+function matrix_num_cols() {
+    if [ "$#" -ne 1 ]; then
+	echo "invalid call to matrix_num_cols()" >&2
+	return 1
+    fi
+
+    # get the number of tabs in first line, and add 1
+    local count=$(($(head -1 < $1 | tr -cd '\t' | wc -c) + 1))
+
+    echo $count
+
     return 0
 }
 
@@ -40,28 +60,44 @@ function matrix_valid() {
 # precondition: matrix is readable
 # you must call this function like this: num_rows=$(matrix_num_rows $file)
 function matrix_num_rows() {
-    if [ "$#" -ne 2 ]; then
+    if [ "$#" -ne 1 ]; then
 	echo "invalid call to matrix_num_rows()" >&2
-	return -1
-    fi
-
-    # get the number of tabs in first line, and add 1
-    local count=$(($(head -1 < $1 | tr -cd '\t' | wc -c) + 1))
-
-    echo $count
-}
-
-# usage: matrix_num_cols(filepath)
-# precondition: matrix is readable
-# you must call this function like this: num_cols=$(matrix_num_cols $file)
-function matrix_num_cols() {
-    if [ "$#" -ne 2 ]; then
-	echo "invalid call to matrix_num_cols()" >&2
-	return -1
+	return 1
     fi
 
     # get the number of lines in the file
-    count=$(wc -l < $1)
+    local count=$(wc -l < $1)
 
     echo $count
+
+    return 0
+}
+
+# usage: dims(filepath)
+# precondition: matrix is readable
+function dims() {
+    if [ "$#" -ne 1 ]; then
+	echo "invalid call to dims()" >&2
+	return 1
+    fi
+    
+    printf "%s %s\n" $(matrix_num_rows $1) $(matrix_num_cols $1)
+
+    return 0
+}
+
+# usage: mktempfile()
+# you must call this function like this: filename=$(mktempfile)
+tmp_counter=0
+function mktempfile() {
+    local pid=$$
+    local filename="matrix.$tmp_counter.tmp.$pid"
+    touch $filename
+    echo $filename
+    tmp_counter=$(($tmp_counter + 1))
+}
+
+# usage: clean_tmp()
+function clean_tmp() {
+    rm matrix.*.tmp.$$
 }
