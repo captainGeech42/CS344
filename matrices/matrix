@@ -1,0 +1,67 @@
+#!/bin/bash
+
+# program: matrix stuff
+# author: alexander nead-work
+# class/prof: cs 344, w2019, justin goins
+
+# usage: ./matrix [command] [matrix1] [matrix2; where applicable]
+# valid commands:
+#  - dims (1 matrix)
+#  - transpose (1 matrix)
+#  - mean (1 matrix)
+#  - add (2 matrices)
+#  - multiply (2 matrices)
+# commands that take 1 matrix can pass the matrix via stdin
+
+# resources used:
+# - https://stackoverflow.com/a/15596250/1940194 (length of str var)
+# - https://www.tldp.org/LDP/abs/html/localvar.html (local vars)
+# - https://unix.stackexchange.com/a/246904 (count whitespace in str)
+# - https://linuxhint.com/return-string-bash-functions/ (bash returning)
+
+# usage: matrix_valid(filepath)
+function matrix_valid() {
+    if [ "$#" -ne 2 ]; then
+	echo "invalid call to matrix_valid()" >&2
+	return 1
+    fi
+
+    # make sure we can read the file
+    cat $1 1>/dev/null 2>/dev/null
+    if [ "$?" -ne 0 ]; then
+	echo "unable to read matrix file, permissions?" >&2
+	return 1;
+    fi
+
+    return 0
+}
+
+# usage: matrix_num_rows(filepath)
+# precondition: matrix is readable
+# you must call this function like this: num_rows=$(matrix_num_rows $file)
+function matrix_num_rows() {
+    if [ "$#" -ne 2 ]; then
+	echo "invalid call to matrix_num_rows()" >&2
+	return -1
+    fi
+
+    # get the number of tabs in first line, and add 1
+    local count=$(($(head -1 < $1 | tr -cd '\t' | wc -c) + 1))
+
+    echo $count
+}
+
+# usage: matrix_num_cols(filepath)
+# precondition: matrix is readable
+# you must call this function like this: num_cols=$(matrix_num_cols $file)
+function matrix_num_cols() {
+    if [ "$#" -ne 2 ]; then
+	echo "invalid call to matrix_num_cols()" >&2
+	return -1
+    fi
+
+    # get the number of lines in the file
+    count=$(wc -l < $1)
+
+    echo $count
+}
