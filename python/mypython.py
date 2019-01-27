@@ -14,7 +14,7 @@ import os, random, string, sys
 
 def get_random_str(n: int) -> str:
 	"""Generate a random string of length n"""
-	return ''.join(random.choices(string.ascii_lowercase, k=n))
+	return ''.join(random.choice(string.ascii_lowercase) for _ in range(n))
 
 def main():
 	for _ in range(3):
