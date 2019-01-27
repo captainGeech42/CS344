@@ -14,10 +14,14 @@
 # commands that take 1 matrix can pass the matrix via stdin
 
 # resources used:
-# - https://stackoverflow.com/a/15596250/1940194 (length of str var)
+# - https://stackoverflow.com/a/15596250 (length of str var)
 # - https://www.tldp.org/LDP/abs/html/localvar.html (local vars)
 # - https://unix.stackexchange.com/a/246904 (count whitespace in str)
 # - https://linuxhint.com/return-string-bash-functions/ (bash returning)
+# - https://www.thelinuxrain.com/articles/transposing-rows-and-columns-3-methods (transposing rows/cols)
+# - https://stackoverflow.com/a/7045517 (read from file or stdin)
+# - https://stackoverflow.com/a/9736732 (read tsv)
+# - https://stackoverflow.com/a/46699430 (bash string as list)
 
 # usage: matrix_valid(filepath)
 function matrix_valid() {
@@ -90,14 +94,252 @@ function dims() {
 # you must call this function like this: filename=$(mktempfile)
 tmp_counter=0
 function mktempfile() {
-    local pid=$$
-    local filename="matrix.$tmp_counter.tmp.$pid"
-    touch $filename
+    local filename="matrix.$tmp_counter.tmp.$$"
+    touch $filename 
     echo $filename
+
     tmp_counter=$(($tmp_counter + 1))
+
+    return 0
 }
 
 # usage: clean_tmp()
 function clean_tmp() {
-    rm matrix.*.tmp.$$
+    rm -f matrix.*.tmp.$$
+
+    return 0
 }
+
+# usage: transpose(filepath)
+# precondition: matrix is readable
+function transpose() {
+    if [ "$#" -ne 1 ]; then
+	echo "invalid call to transpose()" >&2
+	return 1
+    fi
+    
+    # get the number of cols
+    local num_cols=$(matrix_num_cols $1)
+
+    for ((i=1; i<="$num_cols"; i++)); do
+	cut -f"$i" $1 | paste -s
+    done
+
+    return 0
+}
+
+# usage: matrix_stdin(arg2)
+# arg2 can be empty
+function matrix_stdin() {
+    # deliberatly not checking arg count
+    # if $arg2 is empty, $# is 0
+
+    local matrix_filename=;
+
+    if [[ -z "$1" ]]; then
+	# no specified file, read from stdin
+	matrix_filename=$(mktempfile)
+	cat > "$matrix_filename"
+    else
+	# file specified, read from it
+	matrix_filename=$1
+    fi
+
+    echo $matrix_filename
+
+    return 0
+}
+
+# usage: mean(filepath)
+# precondition: matrix is readable
+function mean() {
+    if [ "$#" -ne 1 ]; then
+	echo "invalid call to mean()" >&2
+	return 1
+    fi
+
+    # get num rows for original matrix (needed to compute mean)
+    local num_rows=$(matrix_num_rows $1)
+
+    # transpose the matrix to make iteration easier
+    local trans=$(mktempfile)
+    transpose $1 > $trans
+
+    # loop through each "column" (row in transposed)
+    local out=
+    while IFS=$'\t' read -r -a ints; do
+	# sum it up
+	local sum=0
+	for int in "${ints[@]}"; do
+	    sum=$((sum+int))
+	done
+
+	# divide it
+	local mean=$(((sum+(num_rows/2)*( (sum>0)*2-1))/num_rows))
+
+	# add it to the output
+	out=$out$'\t'$mean
+    done < $trans
+
+    # don't print leading tab
+    echo "${out:1}"
+}
+
+# usage: add(m1, m2)
+# precondition: both matrices are readable
+function add() {
+    if [ "$#" -ne 2 ]; then
+	echo "invalid call to add()" >&2
+	return 1
+    fi
+    
+    # make sure both are the same size
+    local num_rows1=$(matrix_num_rows $1)
+    local num_cols1=$(matrix_num_cols $1)
+    local num_rows2=$(matrix_num_rows $2)
+    local num_cols2=$(matrix_num_cols $2)
+
+    if [ $num_rows1 -ne $num_rows2 ] || [ $num_cols1 -ne $num_cols2 ]; then
+	echo "invalid matrix dimensions" >&2
+	return 1
+    fi
+
+    # add the matrices
+    local IFS=$'\t'
+    while read -r -a m1 <&3 && read -r -a m2 <&4; do
+	local out=
+
+	# loop through each item on the row
+	for ((i=0; i<$num_cols1; i++)); do
+	    # add up the matching elements, append to output str
+	    out=$out$'\t'$(expr "${m1[i]}" + "${m2[i]}")
+	done
+
+	# don't print leading tab
+	echo "${out:1}"
+    done 3<"$1" 4<"$2"
+}
+
+# usage: multiply(m1, m2)
+# precondition: both matrices are readable
+function multiply() {
+    if [ "$#" -ne 2 ]; then
+	echo "invalid call to multiply()" >&2
+	return 1
+    fi
+   
+    # make sure both are compatible
+    local num_cols1=$(matrix_num_cols $1)
+    local num_rows2=$(matrix_num_rows $2)
+
+    if [ $num_cols1 -ne $num_rows2 ]; then
+	echo "invalid matrix dimensions" >&2
+	return 1
+    fi
+
+    # transpose second matrix to make math easier
+    local m2_trans=$(mktempfile)
+    transpose $2 > "m2_trans"
+
+    # loop through each row in m1 and col in m2 (which are rows in m2_trans)
+    local IFS=$'\t'
+    while read -r -a m1; do
+	# output string
+	local out=
+	while read -r -a m2; do
+	    # cross-product
+	    local cp=0
+
+	    for ((i=0; i<$num_cols1; i++)); do
+		printf "m1[i]: %d\tm2[i]: %d\n" "${m1[i]}" "${m2[i]}"
+	        cp=$(expr "$cp" + "${m1[i]}" * "${m2[i]}")
+	    done
+
+	    out=$out$'\t'$cp
+	done < "$m2_trans"
+	echo "${out:1}"
+    done < "$1"
+}
+
+# usage: main ${@:1}
+function main() {
+    case "$1" in
+	dims)
+	    if [[ "$#" -gt 2 ]]; then
+		echo "too many args" >&2
+		return 1
+	    fi
+	    local file=$(matrix_stdin $2)
+	    if matrix_valid $file; then
+		dims $file
+		return $?
+	    else
+		return 1
+	    fi
+	    ;;
+	transpose)
+	    if [[ "$#" -gt 2 ]]; then
+		echo "too many args" >&2
+		return 1
+	    fi
+	    local file=$(matrix_stdin $2)
+	    if matrix_valid $file; then
+		transpose $file
+		return $?
+	    else
+		return 1
+	    fi
+	    ;;
+	mean)
+	    if [[ "$#" -gt 2 ]]; then
+		echo "too many args" >&2
+		return 1
+	    fi
+	    local file=$(matrix_stdin $2)
+	    if matrix_valid $file; then
+		mean $file
+		return $?
+	    else
+		return 1
+	    fi
+	    ;;
+	add)
+	    if [[ "$#" -gt 3 ]]; then
+		echo "too many args" >&2
+		return 1
+	    fi
+	    if matrix_valid $2 && matrix_valid $3; then
+		add $2 $3
+		return $?
+	    else
+		return 1
+	    fi
+	    ;;
+	multiply)
+	    if [[ "$#" -gt 3 ]]; then
+		echo "too many args" >&2
+		return 1
+	    fi
+	    if matrix_valid $2 && matrix_valid $3; then
+		multiply $2 $3
+		return $?
+	    else
+		return 1
+	    fi
+	    ;;
+	*)
+	    echo "invalid command" >&2
+	    return 1
+	    ;;
+    esac
+
+    return 0
+}
+
+# do it this way to clean up temp regradless of early exit from main
+main ${@:1}
+status="$?" # save return value from main
+
+clean_tmp
+
+exit $status # end script w/ main return value

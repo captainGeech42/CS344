@@ -82,7 +82,7 @@ else
 fi
 
 chmod +x "$1" # Make sure submission is executable
-dos2unix "$1" # Fix windows newlines (^M errors)
+#dos2unix "$1" # Fix windows newlines (^M errors)
 
 cd "$(dirname "$1")" # Change working directory to submission file
 cmd="$(basename "$1")"
