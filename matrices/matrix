@@ -239,7 +239,7 @@ function multiply() {
 
     # transpose second matrix to make math easier
     local m2_trans=$(mktempfile)
-    transpose $2 > "m2_trans"
+    transpose $2 > "$m2_trans"
 
     # loop through each row in m1 and col in m2 (which are rows in m2_trans)
     local IFS=$'\t'
@@ -251,8 +251,7 @@ function multiply() {
 	    local cp=0
 
 	    for ((i=0; i<$num_cols1; i++)); do
-		printf "m1[i]: %d\tm2[i]: %d\n" "${m1[i]}" "${m2[i]}"
-	        cp=$(expr "$cp" + "${m1[i]}" * "${m2[i]}")
+		cp=$(expr "$cp" + "${m1[i]}" \* "${m2[i]}")
 	    done
 
 	    out=$out$'\t'$cp
