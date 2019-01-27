@@ -250,6 +250,7 @@ function multiply() {
 	    # cross-product
 	    local cp=0
 
+	    # add product for both nums to total cross-product
 	    for ((i=0; i<$num_cols1; i++)); do
 		cp=$(expr "$cp" + "${m1[i]}" \* "${m2[i]}")
 	    done
