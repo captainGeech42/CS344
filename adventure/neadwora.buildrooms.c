@@ -250,8 +250,6 @@ bool connection_already_exists(Room *r1, Room *r2) {
 // add each room to the other's connections
 // from canvas 2.2
 void connect_room(Room *r1, Room *r2) {
-    printf("r1: %p\tr2: %p\n", r1, r2);
-
     r1->connections[r1->num_connections] = r2;
     r1->num_connections++;
 
