@@ -138,8 +138,7 @@ int get_directory_name(char *buf) {
 // make directory named $name
 int make_directory(char *name) {
     // mkdir returns 0 if successful
-    // 0 is false in C, so flip it
-    return !mkdir(name, 0700);
+    return mkdir(name, 0700) == 0;
 }
 
 // set name, type, and connections for all rooms
@@ -218,6 +217,7 @@ void add_random_connection(Room **rooms) {
     do {
 	r2 = get_random_room(rooms);
     } while (!can_add_connection_from(r2) || is_same_room(r1, r2) || connection_already_exists(r1, r2));
+
     connect_room(r1, r2);
 }
 
@@ -239,7 +239,7 @@ bool connection_already_exists(Room *r1, Room *r2) {
     int i;
     for (i = 0; i < r1->num_connections; i++) {
 	// since connections are bidirectional, we only have to check one room for the other
-	if (strcmp(r1->connections[i]->name, r2->name)) {
+	if (strcmp(r1->connections[i]->name, r2->name) == 0) {
 	    // names are unique
 	    return true;
 	}
@@ -250,6 +250,8 @@ bool connection_already_exists(Room *r1, Room *r2) {
 // add each room to the other's connections
 // from canvas 2.2
 void connect_room(Room *r1, Room *r2) {
+    printf("r1: %p\tr2: %p\n", r1, r2);
+
     r1->connections[r1->num_connections] = r2;
     r1->num_connections++;
 
@@ -261,7 +263,7 @@ void connect_room(Room *r1, Room *r2) {
 // from canvas 2.2
 bool is_same_room(Room *r1, Room *r2) {
     // names are unique
-    return strcmp(r1->name, r2->name);
+    return strcmp(r1->name, r2->name) == 0;
 }
 
 // write the rooms to disk
@@ -271,14 +273,27 @@ void serialize(Room **rooms, char *dir) {
 
     int i, j;
     char path[MAX_FP];
+    memset(path, 0, MAX_FP);
     FILE *file;
     for (i = 0; i < NUM_ROOMS; i++) {
+	// build filename
 	snprintf(path, MAX_FP, "%s.room", rooms[i]->name);
+	
+	// open file
 	file = fopen(path, "w");
+	
+	// write room name
 	fprintf(file, "ROOM NAME: %s\n", rooms[i]->name);
+
+	// write all of the connections
 	for (j = 0; j < rooms[i]->num_connections; j++) {
 	    fprintf(file, "CONNECTION %d: %s\n", j+1, rooms[i]->connections[j]->name);
 	}
+
+	// write room type
 	fprintf(file, "ROOM TYPE: %s\n", rooms[i]->type);
+
+	// close file
+	fclose(file);
     }
 }
