@@ -11,8 +11,8 @@ buildrooms: $(ONID).buildrooms.c
 	./$(ONID).$@
 
 adventure: $(ONID).adventure.c
-	$(CC) $(C_FLAGS)  -o $(ONID).$@ $(ONID).$@.c
+	$(CC) $(C_FLAGS) -lpthread -o $(ONID).$@ $(ONID).$@.c
 	./$(ONID).$@
 
 clean:
-	@$(RM) -r $(ONID).buildrooms $(ONID).adventure *.rooms.*
+	@$(RM) -r $(ONID).buildrooms $(ONID).adventure *.rooms.* core.*

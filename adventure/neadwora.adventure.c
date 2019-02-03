@@ -15,6 +15,8 @@
  * - https://www.gnu.org/software/libc/manual/html_node/Testing-File-Type.html (check if dir)
  * - https://stackoverflow.com/a/1121438 (get num files in dir)
  * - https://stackoverflow.com/a/28462221 (remove trailing newline from string)
+ * - https://www.tutorialspoint.com/c_standard_library/c_function_strftime.htm (strftime)
+ * - https://stackoverflow.com/a/1157217 (nanosleep)
  */
 
 
@@ -23,6 +25,7 @@
 
 #include <dirent.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -62,6 +65,17 @@ typedef struct room {
     int num_connections;
 } Room;
 
+// start with 8 rooms allocated for the path
+#define STARTING_ROOMS_PATH 8
+typedef struct path {
+    int num_rooms;
+    int max_rooms;
+    Room **rooms;
+} Path;
+
+// assignment spec says timestamp written to currentTime.txt
+#define TS_PATH "currentTime.txt"
+
 void log_info(const char *);
 void log_infof(const char *, ...);
 void log_error(const char *);
@@ -72,12 +86,20 @@ Room** room_alloc(size_t);
 Room** deserialize(const char *);
 void room_free(Room **, size_t);
 
+Path* path_alloc();
+void add_room_to_path(Path *, Room *);
+void print_path(Path *);
+void path_free(Path *);
+
 Room* get_start(Room **);
 Room* get_room(Room **, const char *);
 bool is_valid_move(Room *, const char *);
-void prompt(Room *);
-void get_command(Room *, char *, size_t);
+void prompt(Room *, bool);
+void get_command(Room *, char *, size_t, bool);
 void run_game(Room **);
+
+void* run_time(void *);
+void my_sleep(int);
 
 #endif
 
@@ -229,7 +251,7 @@ Room** deserialize(const char *dir) {
             fclose(room_file);
 
             // set number of connections
-            rooms[room_counter]->num_connections = connection_counter;
+            rooms[room_counter]->num_connections = ++connection_counter;
 
             // increment counter
             room_counter++;
@@ -238,6 +260,7 @@ Room** deserialize(const char *dir) {
 
     // return
     closedir(room_dir);
+    chdir("..");
     return rooms;
 }
 
@@ -253,7 +276,7 @@ void room_free(Room **rooms, size_t n) {
         free(rooms[i]->type);
 
         // free each connection
-        for (j = 0; j < rooms[i]->num_connections; j++) {
+        for (j = 0; j < MAX_CONNECTIONS; j++) {
             free(rooms[i]->connections[j]);
         }
 
@@ -267,6 +290,56 @@ void room_free(Room **rooms, size_t n) {
     // free array of rooms
     free(rooms);
     rooms = NULL;
+}
+
+// alloc a Path
+Path* path_alloc() {
+    Path *p = malloc(sizeof(Path));
+    p->rooms = malloc(sizeof(Room*) * STARTING_ROOMS_PATH);
+    p->num_rooms = 0;
+    p->max_rooms = STARTING_ROOMS_PATH;
+    return p;
+}
+
+// add a room to the path
+void add_room_to_path(Path *path, Room *room) {
+    if (path->num_rooms == path->max_rooms) {
+        // we've used all available rooms
+
+        // allocate new array
+        Room **new_rooms = malloc(sizeof(Room*) * (path->max_rooms*2));
+
+        // move old array data to new array
+        int i;
+        for (i = 0; i < path->num_rooms; i++) {
+            new_rooms[i] = path->rooms[i];
+        }
+
+        // free old array
+        free(path->rooms);
+
+        // update struct with new array
+        path->rooms = new_rooms;
+        path->max_rooms *= 2;
+    }
+
+    // add room to the path
+    path->rooms[path->num_rooms++] = room;
+}
+
+// print the name of all rooms in path
+void print_path(Path *path) {
+    int i;
+    for (i = 0; i < path->num_rooms; i++) {
+        puts(path->rooms[i]->name);
+    }
+}
+
+// free all path memory
+void path_free(Path *path) {
+    free(path->rooms);
+    free(path);
+    path = NULL;
 }
 
 // return the pointer for the START_ROOM
@@ -304,21 +377,23 @@ bool is_valid_move(Room *room, const char *name) {
 }
 
 // print prompt to player
-void prompt(Room *room) {
-    // print name
-    printf("CURRENT LOCATION: %s\n", room->name);
+void prompt(Room *room, bool full_prompt) {
+    if (full_prompt) {
+        // print name
+        printf("CURRENT LOCATION: %s\n", room->name);
 
-    // print connections
-    printf("POSSIBLE CONNECTIONS: ");
-    int i;
-    for (i = 0; i < room->num_connections; i++) {
-        printf("%s", room->connections[i]);
+        // print connections
+        printf("POSSIBLE CONNECTIONS: ");
+        int i;
+        for (i = 0; i < room->num_connections; i++) {
+            printf("%s", room->connections[i]);
 
-        // if not the last room, print a comma, otherwise a period
-        if (i+1 != room->num_connections) {
-            printf(", ");
-        } else {
-            puts(".");
+            // if not the last room, print a comma, otherwise a period
+            if (i+1 != room->num_connections) {
+                printf(", ");
+            } else {
+                puts(".");
+            }
         }
     }
 
@@ -327,7 +402,7 @@ void prompt(Room *room) {
 }
 
 // get command from player
-void get_command(Room *room, char *buf, size_t n) {
+void get_command(Room *room, char *buf, size_t n, bool full_prompt) {
     bool valid = false;
 
     while (!valid) {
@@ -341,42 +416,114 @@ void get_command(Room *room, char *buf, size_t n) {
 
         if (!valid) {
             puts("\nHUH? I DON'T UNDERSTAND THAT ROOM. TRY AGAIN.\n");
-            prompt(room);
+            prompt(room, full_prompt);
         }
     }
 }
 
 void run_game(Room **rooms) {
     Room *current_room = get_start(rooms);
+    Path *path = path_alloc();
     char buf[100];
     memset(buf, 0, 100);
+    bool full_prompt = true;
+
+    // initialize time thread
+    pthread_mutex_t time_mutex = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_lock(&time_mutex);
+    pthread_t time_thread;
+    pthread_create(&time_thread, NULL, run_time, &time_mutex);
 
     // main game loop
     while (true) {
         // print prompt
-        prompt(current_room);
+        prompt(current_room, full_prompt);
 
         // get command
-        get_command(current_room, buf, 100);
+        get_command(current_room, buf, 100, full_prompt);
 
         // if room, move
         if (strcmp(buf, "time") != 0) {
             // not handling time, move rooms
             current_room = get_room(rooms, buf);
+            full_prompt = true;
+
+            // add room to path
+            add_room_to_path(path, current_room);
+
+            // blank line
+            puts("");
         } else {
             // handling time command
-            log_info("time not yet implemented, rip");
+            pthread_mutex_unlock(&time_mutex);
+            log_info("game thread, waiting for lock");
+            // wait for time thread to grab lock
+            my_sleep(25);
+            pthread_mutex_lock(&time_mutex);
+            log_info("game thread, got lock");
+
+            // time command doesn't need the rooms outputted again
+            full_prompt = false;
         }
 
         // check if in end room
         if (strcmp(current_room->type, room_types[1]) == 0) {
             puts("YOU HAVE FOUND THE END ROOM. CONGRATULATIONS!");
-            printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS", -1);
-            log_info("victory path not yet implemented, rip");
+            printf("YOU TOOK %d STEPS. YOUR PATH TO VICTORY WAS:\n", path->num_rooms);
+            print_path(path);
 
             break;
         }
     }
+
+    // kill time thread
+    pthread_cancel(time_thread);
+
+    // free path
+    path_free(path);
+}
+
+// code for time thread
+void* run_time(void *mutex) {
+    time_t ts;
+    struct tm *tinfo;
+    char buf[100];
+    FILE *ts_file;
+
+    while (true) {
+        // get lock
+        log_info("time thread, waiting for lock");
+        pthread_mutex_lock(mutex);
+        log_info("time thread, got lock");
+
+        // get time
+        time(&ts);
+        tinfo = localtime(&ts);
+        // 1:03pm, Tuesday, September 13, 2016
+        strftime(buf, 100, "%I:%M%p, %A, %B %d, %Y", tinfo);
+
+        // print time
+        printf("\n %s\n\n", buf);
+
+        // write to file
+        ts_file = fopen(TS_PATH, "w");
+        fprintf(ts_file, "%s\n", buf);
+        fclose(ts_file);
+
+        // unlock
+        pthread_mutex_unlock(mutex);
+
+        // let game thread grab lock
+        my_sleep(25);
+    }
+}
+
+// sleep for $ms milliseconds
+void my_sleep(int ms) {
+    struct timespec ts;
+    ts.tv_sec = ms / 1000;
+    ts.tv_nsec = (ms % 1000) * 1000000;
+    nanosleep(&ts, NULL);
 }
 
 
