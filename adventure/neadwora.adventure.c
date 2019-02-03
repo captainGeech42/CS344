@@ -500,7 +500,7 @@ void* run_time(void *mutex) {
         time(&ts);
         tinfo = localtime(&ts);
         // 1:03pm, Tuesday, September 13, 2016
-        strftime(buf, 100, "%I:%M%p, %A, %B %d, %Y", tinfo);
+        strftime(buf, 100, "%I:%M%P, %A, %B %d, %Y", tinfo);
 
         // print time
         printf("\n %s\n\n", buf);
