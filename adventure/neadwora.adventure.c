@@ -424,6 +424,7 @@ void get_command(Room *room, char *buf, size_t n, bool full_prompt) {
 void run_game(Room **rooms) {
     Room *current_room = get_start(rooms);
     Path *path = path_alloc();
+    FILE *fp;
     char buf[100];
     memset(buf, 0, 100);
     bool full_prompt = true;
@@ -461,6 +462,13 @@ void run_game(Room **rooms) {
             my_sleep(25);
             pthread_mutex_lock(&time_mutex);
             log_info("game thread, got lock");
+
+            // get time from file
+            fp = fopen(TS_PATH, "r");
+            fgets(buf, 100, fp);
+
+            // print time
+            printf("\n %s\n", buf);
 
             // time command doesn't need the rooms outputted again
             full_prompt = false;
@@ -503,7 +511,8 @@ void* run_time(void *mutex) {
         strftime(buf, 100, "%I:%M%P, %A, %B %d, %Y", tinfo);
 
         // print time
-        printf("\n %s\n\n", buf);
+        // printf("\n %s\n\n", buf);
+        // turns out you have to read it from the file it gets written to, rip
 
         // write to file
         ts_file = fopen(TS_PATH, "w");
