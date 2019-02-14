@@ -10,7 +10,7 @@ int main() {
         prompt(cmd);
 
         // parse pieces
-        if (!parse(cmd)) continue;
+        if (!parse(cmd)) goto end_loop;
 
 #ifdef DEBUG
         printf("program: %s\n", cmd->program);
@@ -21,6 +21,7 @@ int main() {
         printf("background: %s\n", cmd->background ? "true" : "false");
 #endif
 
+end_loop:
         // free cmd
         free_cmd(cmd);
     }
@@ -91,7 +92,7 @@ bool parse(Command *cmd) {
 
     // get args/redirects/background
     while ((tmp = strtok(NULL, " ")) != NULL) {
-        if (strstr(tmp, "<") != NULL) {
+        if (tmp[0] == '<') {
             // there is a < in our token (input redirect)
 
             if (strlen(tmp) > 1) {
@@ -102,17 +103,17 @@ bool parse(Command *cmd) {
                 // there was a space
                 // get the next token, it's the filename
                 tmp = strtok(NULL, " ");
+            }
 
-                // make sure it's valid
-                if (tmp == NULL || strspn(tmp, "<>&") != 0) {
-                    fputs("invalid command (check redirects)\n", stderr);
-                    return false;
-                }
+            // make sure it's valid
+            if (tmp == NULL || strpbrk(tmp, "<>&") != NULL) {
+                fputs("invalid command (check redirects)\n", stderr);
+                return false;
             }
 
             // save the filename to the struct
             strcpy(cmd->input_file, tmp);
-        } else if (strstr(tmp, ">") != NULL) {
+        } else if (tmp[0] == '>') {
             // there is a > in our token (output redirect)
 
             if (strlen(tmp) > 1) {
@@ -123,12 +124,12 @@ bool parse(Command *cmd) {
                 // there was a space
                 // get the next token, it's the filename
                 tmp = strtok(NULL, " ");
+            }
 
-                // make sure it's valid
-                if (tmp == NULL || strspn(tmp, "<>&") != 0) {
-                    fputs("invalid command (check redirects)\n", stderr);
-                    return false;
-                }
+            // make sure it's valid
+            if (tmp == NULL || strpbrk(tmp, "<>&") != NULL) {
+                fputs("invalid command (check redirects)\n", stderr);
+                return false;
             }
 
             // save the filename to the struct
@@ -136,7 +137,13 @@ bool parse(Command *cmd) {
         } else if (strcmp("&", tmp) == 0) {
             // we have an & (background proccess)
             cmd->background = true;
-        } else {
+        } else if (strpbrk(tmp, "<>&") != NULL) {
+            // we have a special character that wasn't already handled
+            // meaning, it shouldn't be there
+            fputs("invalid character in arguments list\n", stderr);
+            return false;
+        }
+        else {
             // we have an argument
             strcpy(cmd->argv[cmd->argc++], tmp);
         }
