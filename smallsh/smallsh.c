@@ -87,6 +87,7 @@ void prompt(Command *cmd) {
 // parse out important pieces
 bool parse(Command *cmd) {
     char *tmp;
+    bool mallocd = false;
 
     // get program
     tmp = strtok(cmd->line, " ");
@@ -94,6 +95,31 @@ bool parse(Command *cmd) {
 
     // get args/redirects/background
     while ((tmp = strtok(NULL, " ")) != NULL) {
+        if (strstr(tmp, "$$") != NULL) {
+            // we need to expand $$ to smallsh's pid
+            
+            // get pid as string
+            char pid[6]; // max pid is 65535, plus \x00
+            memset(pid, 0, 6);
+            sprintf(pid, "%d", getpid());
+
+            // alloc new memory
+            char *new_tmp = malloc(sizeof(char) * (strlen(tmp) + strlen(pid))); // a few extra bytes, eh
+
+            // move over first part of tmp
+            strncpy(new_tmp, tmp, (size_t)(strstr(tmp, "$$") - tmp));
+
+            // move over pid
+            strcat(new_tmp, pid);
+
+            // move over rest of string
+            strcat(new_tmp, strstr(tmp, "$$") + 2);
+
+            // move it back to tmp;
+            tmp = new_tmp;
+            mallocd = true;
+        }
+
         if (tmp[0] == '<') {
             // there is a < in our token (input redirect)
 
@@ -149,6 +175,9 @@ bool parse(Command *cmd) {
             // we have an argument
             strcpy(cmd->argv[cmd->argc++], tmp);
         }
+
+        // check if we malloc'd
+        if (mallocd) free(tmp);
     }
 
     // we didn't get any errors parsing
@@ -166,5 +195,8 @@ void run(Command *cmd) {
     } else if (strcmp(cmd->program, "status") == 0) {
         // run built-in status
         my_status(proc_status);
+    } else {
+        // not a built-in
+
     }
 }
