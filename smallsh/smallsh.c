@@ -111,6 +111,11 @@ bool parse(Command *cmd) {
 
             // alloc new memory
             char *new_tmp = malloc(sizeof(char) * (strlen(tmp) + strlen(pid))); // a few extra bytes, eh
+            memset(new_tmp, 0, strlen(tmp) + strlen(pid));
+            if (new_tmp == NULL) {
+                fputs("couldn't malloc for $$\n", stderr);
+                return false;
+            }
 
             // move over first part of tmp
             strncpy(new_tmp, tmp, (size_t)(strstr(tmp, "$$") - tmp));
