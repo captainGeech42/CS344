@@ -96,6 +96,9 @@ bool parse(Command *cmd) {
     tmp = strtok(cmd->line, " ");
     strcpy(cmd->program, tmp);
 
+    // program has to be argv[0]
+    strcpy(cmd->argv[cmd->argc++], cmd->program);
+
     // get args/redirects/background
     while ((tmp = strtok(NULL, " ")) != NULL) {
         if (strstr(tmp, "$$") != NULL) {
@@ -189,17 +192,79 @@ bool parse(Command *cmd) {
 
 // run the command
 void run(Command *cmd) {
+    int ret;
     if (strcmp(cmd->program, "cd") == 0) {
         // run built-in cd
         my_cd(cmd->argv[0]);
     } else if (strcmp(cmd->program, "exit") == 0) {
         // run built-in exit
         my_exit();
+        fin = true;
     } else if (strcmp(cmd->program, "status") == 0) {
         // run built-in status
         my_status(proc_status);
     } else {
         // not a built-in
+        pid_t pid = fork();
+        switch (pid) {
+            case -1:
+                // something went wrong
+                fprintf(stderr, "error when forking: %s\n", strerror(errno)); fflush(stderr);
+                exit(1);
+                break;
+            case 0:
+                // child process
+
+                // handle input/output redirects
+                if (strlen(cmd->input_file) > 0) {
+                    // dup2 stdin
+                    int input = open(cmd->input_file, O_RDONLY);
+                    ret = dup2(input, 0);
+
+                    if (ret == -1) {
+                        fprintf(stderr, "error on input dup2: %s\n", strerror(errno)); fflush(stderr);
+                        exit(2);
+                    }
+                }
+                if (strlen(cmd->output_file) > 0) {
+                    // dup2 stdout
+                    int output = open(cmd->output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                    ret = dup2(output, 1);
+
+                    if (ret == -1) {
+                        fprintf(stderr, "error on output dup2: %s\n", strerror(errno)); fflush(stderr);
+                        exit(2);
+                    }
+                }
+
+                // copy over arguments needed (+1 for null terminator)
+                char **argv = malloc(sizeof(char *) * (cmd->argc + 1));
+                for (int i = 0; i < cmd->argc; i++) {
+                    argv[i] = malloc(sizeof(char) * (strlen(cmd->argv[i]) + 1));
+                    strcpy(argv[i], cmd->argv[i]);
+                }
+
+                // terminate argv array
+                argv[cmd->argc] = NULL;
+
+                // spawn process
+                ret = execvp(cmd->program, argv);
+
+                if (ret == -1) {
+                    fprintf(stderr, "error on execvp: %s\n", strerror(errno)); fflush(stderr);
+                }
+                break;
+            default:
+                // parent process
+
+                // check if cmd is foreground
+                if (!cmd->background) {
+                    // wait for execution to finish
+                    waitpid(pid, &proc_status, 0);
+                    proc_status = WEXITSTATUS(proc_status);
+                }
+                break;
+        }
 
     }
 }

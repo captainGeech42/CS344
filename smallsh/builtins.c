@@ -3,7 +3,7 @@
 void my_exit() {
     //TODO kill background procs
 
-    exit(0);
+    // don't actually exit here, we have to clean up memory in main
 }
 
 void my_cd(const char *dir) {
