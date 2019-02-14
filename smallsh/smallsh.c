@@ -105,7 +105,7 @@ bool parse(Command *cmd) {
 
                 // make sure it's valid
                 if (tmp == NULL || strspn(tmp, "<>&") != 0) {
-                    fputs("invalid command (check redirects)", stderr);
+                    fputs("invalid command (check redirects)\n", stderr);
                     return false;
                 }
             }
@@ -126,7 +126,7 @@ bool parse(Command *cmd) {
 
                 // make sure it's valid
                 if (tmp == NULL || strspn(tmp, "<>&") != 0) {
-                    fputs("invalid command (check redirects)", stderr);
+                    fputs("invalid command (check redirects)\n", stderr);
                     return false;
                 }
             }
