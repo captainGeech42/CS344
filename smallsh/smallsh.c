@@ -21,6 +21,8 @@ int main() {
         printf("background: %s\n", cmd->background ? "true" : "false");
 #endif
 
+        run(cmd);
+
 end_loop:
         // free cmd
         free_cmd(cmd);
@@ -151,4 +153,18 @@ bool parse(Command *cmd) {
 
     // we didn't get any errors parsing
     return true;
+}
+
+// run the command
+void run(Command *cmd) {
+    if (strcmp(cmd->program, "cd") == 0) {
+        // run built-in cd
+        my_cd(cmd->argv[0]);
+    } else if (strcmp(cmd->program, "exit") == 0) {
+        // run built-in exit
+        my_exit();
+    } else if (strcmp(cmd->program, "status") == 0) {
+        // run built-in status
+        my_status(proc_status);
+    }
 }

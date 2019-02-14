@@ -1,6 +1,8 @@
 #ifndef SMALLSH_H
 #define SMALLSH_H
 
+#include "builtins.h"
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +11,8 @@
 #define MAX_COMMAND_LINE 2048
 #define MAX_NUM_ARGS 512
 
-extern int errno;
-bool fin = false;
+int proc_status = 0; // this is set for the foreground process exit code
+bool fin = false; // main loop condition
 
 typedef struct command {
     char *line; // full command input
@@ -29,5 +31,6 @@ void free_cmd(Command *);
 
 void prompt(Command *);
 bool parse(Command *);
+void run(Command *);
 
 #endif
