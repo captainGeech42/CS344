@@ -89,6 +89,9 @@ bool parse(Command *cmd) {
     char *tmp;
     bool mallocd = false;
 
+    // check for blank or comment lines
+    if (strlen(cmd->line) == 0 || *(cmd->line) == '#') return false;
+
     // get program
     tmp = strtok(cmd->line, " ");
     strcpy(cmd->program, tmp);
