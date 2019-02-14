@@ -10,20 +10,24 @@
 #define MAX_NUM_ARGS 512
 
 extern int errno;
-bool exit = false;
+bool fin = false;
 
 typedef struct command {
-    char *line;
-    char *program;
-    char **argv;
-    int argc;
+    char *line; // full command input
+    char *program; // command to run
+    int argc; // num args
+    char **argv; // args
+    char *input_file; // input file (optional)
+    char *output_file; // output file (optional)
+    bool background; // true if & (optional)
 } Command;
 
-int main(int, char **);
+int main();
 
 Command* alloc_cmd();
 void free_cmd(Command *);
 
-void prompt(char **);
+void prompt(Command *);
+bool parse(Command *);
 
 #endif
