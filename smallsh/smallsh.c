@@ -2,6 +2,8 @@
 
 // main
 int main() {
+    register_parent();
+
     while (!fin) {
         // alloc/init command
         Command *cmd = alloc_cmd();
@@ -248,7 +250,7 @@ void run(Command *cmd) {
 
                     if (ret == -1) {
                         fprintf(stderr, "error on output dup2: %s\n", strerror(errno)); fflush(stderr);
-                        exit(2);
+                        exit(3);
                     }
                 } else if (cmd->background) {
                     // dup2 stdout to null
@@ -257,7 +259,7 @@ void run(Command *cmd) {
 
                     if (ret == -1) {
                         fprintf(stderr, "error on output dup2: %s\n", strerror(errno)); fflush(stderr);
-                        exit(2);
+                        exit(3);
                     }
                 }
 
@@ -271,16 +273,21 @@ void run(Command *cmd) {
                 // terminate argv array
                 argv[cmd->argc] = NULL;
 
+                // register signal handlers
+                register_child();
+
                 // spawn process
                 ret = execvp(cmd->program, argv);
 
                 if (ret == -1) {
                     fprintf(stderr, "error on execvp: %s\n", strerror(errno)); fflush(stderr);
-                    exit(2);
+                    exit(1);
                 }
                 break;
             default:
                 // parent process
+
+                // 
 
                 // check if cmd is foreground
                 // TODO also need to check if in foreground-only mode

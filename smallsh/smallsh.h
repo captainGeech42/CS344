@@ -2,7 +2,7 @@
 #define SMALLSH_H
 
 #include "builtins.h"
-#include "signal.h"
+#include "signals.h"
 
 #include <fcntl.h>
 #include <stdbool.h>
