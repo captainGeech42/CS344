@@ -231,10 +231,28 @@ void run(Command *cmd) {
                         fprintf(stderr, "error on input dup2: %s\n", strerror(errno)); fflush(stderr);
                         exit(2);
                     }
+                } else if (cmd->background) {
+                    // dup2 stdin to null
+                    int input = open("/dev/null", O_RDONLY);
+                    ret = dup2(input, 0);
+
+                    if (ret == -1) {
+                        fprintf(stderr, "error on input dup2: %s\n", strerror(errno)); fflush(stderr);
+                        exit(2);
+                    }
                 }
                 if (strlen(cmd->output_file) > 0) {
                     // dup2 stdout
                     int output = open(cmd->output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                    ret = dup2(output, 1);
+
+                    if (ret == -1) {
+                        fprintf(stderr, "error on output dup2: %s\n", strerror(errno)); fflush(stderr);
+                        exit(2);
+                    }
+                } else if (cmd->background) {
+                    // dup2 stdout to null
+                    int output = open("/dev/null", O_WRONLY | O_CREAT | O_TRUNC, 0644);
                     ret = dup2(output, 1);
 
                     if (ret == -1) {
