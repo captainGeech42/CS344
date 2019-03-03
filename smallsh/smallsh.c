@@ -200,11 +200,12 @@ void run(Command *cmd) {
     int ret;
     if (strcmp(cmd->program, "cd") == 0) {
         // run built-in cd
-        my_cd(cmd->argv[0]);
+        my_cd(cmd->argv[1]);
     } else if (strcmp(cmd->program, "exit") == 0) {
         // run built-in exit
         my_exit();
         fin = true;
+        return;
     } else if (strcmp(cmd->program, "status") == 0) {
         // run built-in status
         my_status(proc_status);
@@ -257,12 +258,14 @@ void run(Command *cmd) {
 
                 if (ret == -1) {
                     fprintf(stderr, "error on execvp: %s\n", strerror(errno)); fflush(stderr);
+                    exit(2);
                 }
                 break;
             default:
                 // parent process
 
                 // check if cmd is foreground
+                // TODO also need to check if in foreground-only mode
                 if (!cmd->background) {
                     // wait for execution to finish
                     waitpid(pid, &proc_status, 0);

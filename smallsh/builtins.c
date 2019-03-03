@@ -11,6 +11,9 @@ void my_cd(const char *dir) {
     if (dir == NULL || strlen(dir) == 0) {
         // no directory specified;, go to home dir
         ret = chdir(getenv("HOME"));
+#ifdef DEBUG
+        printf("%s\n", getenv("HOME"));
+#endif
     } else {
         // directory specified, go there
         ret = chdir(dir);
