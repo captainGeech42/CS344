@@ -19,7 +19,7 @@ keygen: keygen.c
 .PHONY: submit
 .SILENT: submit
 submit:
-	zip -q $(ZIP) *.c *.h Makefile README
+	zip -q $(ZIP) *.c *.h Makefile compileall
 	echo "submit $(ZIP)"
 
 .PHONY: clean
