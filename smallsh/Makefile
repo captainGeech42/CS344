@@ -1,5 +1,5 @@
 CC=gcc
-C_FLAGS=-ggdb -std=gnu99 -Wall -Werror
+C_FLAGS=-ggdb -std=gnu99 -Wall -Werror -lpthread
 
 EXE=smallsh
 ZIP=neadwora.smallsh.zip

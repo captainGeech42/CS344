@@ -3,6 +3,7 @@
 // main
 int main() {
     register_parent();
+    jobs_init();
 
     while (!fin) {
         // alloc/init command
@@ -243,6 +244,7 @@ void run(Command *cmd) {
                         exit(2);
                     }
                 }
+
                 if (strlen(cmd->output_file) > 0) {
                     // dup2 stdout
                     int output = open(cmd->output_file, O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -287,12 +289,18 @@ void run(Command *cmd) {
             default:
                 // parent process
 
-                // 
+                // check if we should be in background or foreground
+                if (cmd->background && !foreground_mode) {
+                    // run in background
 
-                // check if cmd is foreground
-                // TODO also need to check if in foreground-only mode
-                if (!cmd->background) {
-                    // wait for execution to finish
+                    // save the pid
+                    add_proc(pid);
+
+                    // print the pid
+                    printf("background pid is %d\n", pid);
+                } else {
+                    // run in foreground, wait for execution to finish
+
                     waitpid(pid, &proc_status, 0);
                     proc_status = WEXITSTATUS(proc_status);
                 }

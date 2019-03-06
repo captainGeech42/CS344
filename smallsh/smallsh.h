@@ -2,6 +2,7 @@
 #define SMALLSH_H
 
 #include "builtins.h"
+#include "jobs.h"
 #include "signals.h"
 
 #include <fcntl.h>

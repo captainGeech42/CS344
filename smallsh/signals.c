@@ -9,6 +9,12 @@ void register_child() {
     sigaction(SIGINT, &sa_sigint, NULL);
 
     // register child sigtstp handler
+    struct sigaction sa_sigtstp;
+    sa_sigtstp.sa_handler = handle_sigtstp_child;
+    sigfillset(&sa_sigtstp.sa_mask);
+    sa_sigtstp.sa_flags = 0;
+    sigaction(SIGTSTP, &sa_sigtstp, NULL);
+    foreground_mode = false;
 }
 
 void handle_sigint_child(int signo) {
@@ -18,6 +24,16 @@ void handle_sigint_child(int signo) {
 
     exit(0);
 }
+
+void handle_sigtstp_child(int signo) {
+#ifdef DEBUG
+    puts("got sigtstp (child)");
+#endif
+
+    // do nothing
+    puts("");
+}
+
 
 
 void register_parent() {
@@ -30,7 +46,7 @@ void register_parent() {
     
     // register sigtstp handler
     struct sigaction sa_sigtstp;
-    sa_sigtstp.sa_handler = handle_sigtstp;
+    sa_sigtstp.sa_handler = handle_sigtstp_parent;
     sigfillset(&sa_sigtstp.sa_mask);
     sa_sigtstp.sa_flags = 0;
     sigaction(SIGTSTP, &sa_sigtstp, NULL);
@@ -46,9 +62,9 @@ void handle_sigint_parent(int signo) {
     puts("");
 }
 
-void handle_sigtstp(int signo) {
+void handle_sigtstp_parent(int signo) {
 #ifdef DEBUG
-    puts("got sigtstp");
+    puts("got sigtstp (parent)");
 #endif
 
     foreground_mode = !foreground_mode;
