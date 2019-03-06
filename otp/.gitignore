@@ -1,0 +1,9 @@
+keygen
+otp_enc
+otp_enc_d
+otp_dec
+otp_dec_d
+*.o
+*.d
+*.core
+*peda*
