@@ -9,7 +9,7 @@ int main(int argc, char **argv) {
 
     // make sure a valid length was specified
     int keylen = atoi(argv[1]);
-    if (keylen == 0) {
+    if (keylen < 1) {
         fputs("invalid key length specified\n", stderr);
         return 1;
     }
