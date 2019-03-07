@@ -1,6 +1,4 @@
-#include <stdlib.h>
-#include <stdio.h>
-#include <time.h>
+#include "keygen.h"
 
 int main(int argc, char **argv) {
     // validate arguments
