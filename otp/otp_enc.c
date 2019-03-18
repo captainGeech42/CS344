@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
     }
 
     // print ciphertext
-    puts(ciphertext);
+    printf("%s", ciphertext);
 
     // cleanup
     free(ciphertext);

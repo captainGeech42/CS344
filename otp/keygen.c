@@ -19,10 +19,11 @@ int main(int argc, char **argv) {
 
     // alloc memory for the key
     char *key = malloc(sizeof(char) * keylen);
+    bzero(key, keylen);
 
     // generate key
-    int r;
-    for (int i = 0; i < keylen; i++) {
+    int i,r;
+    for (i = 0; i < keylen; i++) {
         r = rand() % 27;
         if (r == 26) {
             // add a space
@@ -32,6 +33,7 @@ int main(int argc, char **argv) {
             key[i] = r + 'A';
         }
     }
+    key[i] = '\0';
 
     // print key
     puts(key);
