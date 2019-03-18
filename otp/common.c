@@ -18,6 +18,11 @@ char get_char(int i) {
     }
 }
 
+// make sure character is valid
+bool is_valid_char(char c) {
+    return c == ' ' || (c >= 'A' && c <= 'Z') || c == '\n' || c == '\0';
+}
+
 // get the contents of a file, save to *data, return length of buffer in data
 int get_file(const char *filename, char **data) {
     // TODO add error checking
@@ -101,6 +106,11 @@ int recv_data(int fd, char **dest) {
             return -1;
         }
 
+        if (!is_valid_char(*(data+offset))) {
+            fputs("received a bad character, exiting\n", stderr);
+            exit(1);
+        }
+
         // clean up any straggler null bytes
 //         if (*(data+offset) == '\0') {
 // #ifdef DEBUG
@@ -120,38 +130,6 @@ int recv_data(int fd, char **dest) {
 // send data to the server
 // returns 0 if good, 1 if bad
 bool send_data(int fd, const char *src, size_t length) {
-/*
-#region old
-*/
-    // size_t newlen;
-    // char *data;
-    // bool mallocd;
-
-    // // make sure our message is aligned to our block size
-    // if (length % BUFFER_BASE != 0) {
-    //     newlen = length + (BUFFER_BASE - length);
-    //     data = malloc(sizeof(char) * newlen);
-    //     mallocd = true;
-    //     bzero(data, newlen);
-    //     strncpy(data, src, length);
-    // } else {
-    //     data = src;
-    //     newlen = length;
-    //     mallocd = false;
-    // }
-
-    // for (int i = 0; i < newlen; i += BUFFER_BASE) {
-    //     if (write(fd, data+i, BUFFER_BASE) < 0) {
-    //         fprintf(stderr, "error writing to socket: %s\n", strerror(errno));
-    //         return false;
-    //     }
-    // }
-
-    // if (mallocd) free(data);
-/*
-#endregion
-*/
-
     int i;
 #ifdef DEBUG
     printf("sending %zd bytes\n", length);
@@ -160,6 +138,11 @@ bool send_data(int fd, const char *src, size_t length) {
 #ifdef DEBUG
         printf("sending char: 0x%x\n", (unsigned int)*(src+i));
 #endif
+        if (!is_valid_char(*(src+i))) {
+            fputs("got a bad character to send, exiting\n", stderr);
+            exit(1);
+        }
+
         if (write(fd, src+i, 1) < 0) {
             fprintf(stderr, "error writing to socket: %s\n", strerror(errno));
         }

@@ -35,8 +35,8 @@ otp_dec: otp_dec.c otp_dec.h common.c common.h
 .PHONY: submit
 .SILENT: submit
 submit:
-	zip -q $(ZIP) *.c *.h Makefile compileall
-	echo "submit $(ZIP)"
+	zip -q $(ZIP) *.c *.h Makefile compileall plaintext[1-5] p4gradingscript readme.txt
+	echo "submit $(ZIP), ggwp"
 
 .PHONY: clean
 .SILENT: clean
