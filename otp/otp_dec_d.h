@@ -1,5 +1,5 @@
-#ifndef OTP_ENC_D_H
-#define OTP_ENC_D_H
+#ifndef OTP_DEC_D_H
+#define OTP_DEC_D_H
 
 #include "constants.h"
 
@@ -13,7 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#define CONNECTION_TYPE "encode"
+#define CONNECTION_TYPE "decode"
 
 int main(int, char **);
 void process(int);

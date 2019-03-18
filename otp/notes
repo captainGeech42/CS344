@@ -1,0 +1,10 @@
+handshake:
+    encode:
+        client sends 0xaa
+        server sends back 0xaa if good, 0xbb if bad
+    decode:
+        client sends 0xcc
+        server sends back 0xcc if good, 0xdd if bad
+
+sending data:
+    client sends length of text

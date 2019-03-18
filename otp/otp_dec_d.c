@@ -1,4 +1,4 @@
-#include "otp_enc_d.h"
+#include "otp_dec_d.h"
 
 int main(int argc, char **argv) {
     // check for args
@@ -85,7 +85,7 @@ void process(int socket) {
     if (strcmp(conn_type, CONNECTION_TYPE) != 0) {
         fputs("didn't receive a connection from otp_enc\n", stderr);
         write(socket, CONNECTION_BAD, strlen(CONNECTION_BAD)+1);
-        exit(2);
+        return;
     }
     write(socket, CONNECTION_GOOD, strlen(CONNECTION_GOOD)+1);
 #ifdef DEBUG
@@ -208,8 +208,8 @@ int recv_data(int socket, char **plaintext_ptr, char **key_ptr) {
         }
 #ifdef DEBUG
         else {
-            printf("got %zu bytes\n", bytes_read);
-            puts(key);
+            // printf("got %zu bytes\n", bytes_read);
+            // puts(key);
         }
 #endif
     }
@@ -238,7 +238,7 @@ void send_ciphertext(int socket, const char *plaintext, const char *key) {
         p = get_int(plaintext[i]);
         k = get_int(key[i]);
 
-        c = (p + k) % 27;
+        c = (p - k + 27) % 27;
         ciphertext[i] = get_char(c);
     }
     ciphertext[i] = '\n';
