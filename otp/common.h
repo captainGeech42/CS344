@@ -2,18 +2,21 @@
 #define COMMON_H
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
 
 #define CONNECTION_BACKLOG 5
 // #define BUFFER_BASE 1024
-#define MAX_DATA 70000
+#define MAX_DATA 70002 // 70k + newline + nullbyte
 
 #ifdef ENCODE
 #define HANDSHAKE_GOOD 0xaa

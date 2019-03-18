@@ -27,7 +27,7 @@ int get_file(const char *filename, char **data) {
     int pagesize = getpagesize();
     int size = st.st_size + (pagesize - (st.st_size % pagesize));
     *data = (char *)mmap(0, size, PROT_READ, MAP_PRIVATE, fd, 0);
-    return size;
+    return (int)st.st_size;
 }
 
 // start a listener on the specified port
@@ -84,21 +84,34 @@ int connect_to_server(int port) {
         fprintf(stderr, "error on connect: %s\n", strerror(errno));
         return 1;
     }
+
+    return socket_fd;
 }
 
-// get data until a newline or null byte from the server
+// get data until a newline from the server
 // returns length of the data
 int recv_data(int fd, char **dest) {
     char *data = malloc(sizeof(char) * MAX_DATA);
     bzero(data, MAX_DATA);
-    int offset = 0;
+    int offset = -1;
 
     do {
-        if (read(fd, data+offset, 1) < 0) {
-            fprintf("error reading from socket: %s\n", strerror(errno));
+        if (read(fd, data+(++offset), 1) < 0) {
+            fprintf(stderr, "error reading from socket: %s\n", strerror(errno));
             return -1;
         }
-    } while (*(data+offset) != '\n' || *(data+offset) != '\0');
+
+        // clean up any straggler null bytes
+//         if (*(data+offset) == '\0') {
+// #ifdef DEBUG
+//             puts("straggler null byte");
+// #endif
+//             data += offset;
+//         }
+#ifdef DEBUG
+        printf("so far recv'd: %s\n", data);
+#endif
+    } while (*(data+offset) != '\n');
 
     *dest = data;
     return offset;
@@ -138,19 +151,39 @@ bool send_data(int fd, const char *src, size_t length) {
 /*
 #endregion
 */
-    
-    for (int i = 0; i < length; i++) {
+
+    int i;
+#ifdef DEBUG
+    printf("sending %zd bytes\n", length);
+#endif
+    for (i = 0; i < length; i++) {
+#ifdef DEBUG
+        printf("sending char: 0x%x\n", (unsigned int)*(src+i));
+#endif
         if (write(fd, src+i, 1) < 0) {
             fprintf(stderr, "error writing to socket: %s\n", strerror(errno));
         }
     }
 
+    // send newline to end transmission if one wasn't already sent
+    if (*(src+i) == '\n') {
+        if (write(fd, "\n", 1) < 0) {
+            fprintf(stderr, "error writing to socket: %s\n", strerror(errno));
+        }
+#ifdef DEBUG
+        puts("manually sent newline");
+#endif
+    }
     return true;
 }
 
 // perform handshake as server
 // returns true if passed, false if not
 bool handshake_server(int fd) {
+#ifdef DEBUG
+    printf("good = 0x%x, bad = 0x%x\n", HANDSHAKE_GOOD, HANDSHAKE_BAD);
+#endif
+
     char data[2];
     bzero(data, 2);
 
@@ -161,7 +194,10 @@ bool handshake_server(int fd) {
     }
 
     // if we got a bad byte, fail the handshake
-    if (*data != HANDSHAKE_GOOD) {
+    if (*data != (0xffffff00 | HANDSHAKE_GOOD)) {
+#ifdef DEBUG
+        printf("*data = 0x%x\n", *data);
+#endif
         *data = HANDSHAKE_BAD;
     }
 
@@ -171,10 +207,14 @@ bool handshake_server(int fd) {
         return false;
     }
 
-    return *data == HANDSHAKE_GOOD
+    return *data == (0xffffff00 | HANDSHAKE_GOOD);
 }
 
 bool handshake_client(int fd) {
+#ifdef DEBUG
+    printf("good = 0x%x, bad = 0x%x\n", HANDSHAKE_GOOD, HANDSHAKE_BAD);
+#endif
+
     char data[2];
     *data = HANDSHAKE_GOOD;
 
@@ -190,5 +230,5 @@ bool handshake_client(int fd) {
         return false;
     }
 
-    return *data == HANDSHAKE_GOOD;
+    return *data == (0xffffff00 | HANDSHAKE_GOOD);
 }
